@@ -1,11 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using TransactionManager;
+using TransactionManager.Core;
 using TransactionManager.IntegrationTests.Data;
 using TransactionManager.IntegrationTests.Models;
 using TransactionManager.IntegrationTests.Services;
 
-namespace TransactionManager.IntegrationTests;
+namespace TransactionManager.IntegrationTests.SqlServer;
 
 public class TestRunner(IServiceProvider rootProvider)
 {

@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TransactionManager.Core", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TransactionManager.IntegrationTests", "TransactionManager.IntegrationTests\TransactionManager.IntegrationTests.csproj", "{BC1D735A-285B-45C2-A294-A10F49EE5212}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TransactionManager.IntegrationTests.SqlServer", "TransactionManager.IntegrationTests.SqlServer\TransactionManager.IntegrationTests.SqlServer.csproj", "{4F9B4AC4-5FEA-45DB-9F00-744899DB1AF0}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{BC1D735A-285B-45C2-A294-A10F49EE5212}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BC1D735A-285B-45C2-A294-A10F49EE5212}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BC1D735A-285B-45C2-A294-A10F49EE5212}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4F9B4AC4-5FEA-45DB-9F00-744899DB1AF0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4F9B4AC4-5FEA-45DB-9F00-744899DB1AF0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4F9B4AC4-5FEA-45DB-9F00-744899DB1AF0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4F9B4AC4-5FEA-45DB-9F00-744899DB1AF0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

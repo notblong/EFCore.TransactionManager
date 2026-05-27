@@ -1,9 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using TransactionManager.Core;
-using TransactionManager.IntegrationTests;
 using TransactionManager.IntegrationTests.Data;
 using TransactionManager.IntegrationTests.Services;
+using TransactionManager.IntegrationTests.SqlServer;
 
 var connectionString = "Host=localhost;Port=5432;Database=txdemo;Username=postgres;Password=demo1234";
 
