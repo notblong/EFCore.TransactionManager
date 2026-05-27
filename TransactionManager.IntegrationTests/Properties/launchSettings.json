@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "TxnManager.IntegrationTests": {
+      "commandName": "Project"
+    },
+    "Container (Dockerfile)": {
+      "commandName": "Docker"
+    }
+  }
+}
