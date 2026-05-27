@@ -4,10 +4,29 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <IsPackable>true</IsPackable>
+    <PackageId>EFCore.TransactionManager</PackageId>
+    <Version>8.0.0-alpha</Version>
+    <Authors>Long Pham</Authors>
+    <Company>Long Pham</Company>
+    <Product>TransactionManager</Product>
+    <Title>EF Core Transaction Manager</Title>
+    <Description>A simple lightweight transaction manager abstraction for coordinating Entity Framework Core database transactions.</Description>
+    <PackageTags>entity-framework-core;ef-core;transactions;transaction-manager</PackageTags>
+    <PackageProjectUrl>https://github.com/notblong/EFCore.TransactionManager</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/notblong/EFCore.TransactionManager.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\README.md" Pack="true" PackagePath="\" />
+    <None Include="..\LICENSE" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 </Project>
