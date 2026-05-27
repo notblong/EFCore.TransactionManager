@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TransactionManager.Integrat
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TransactionManager.IntegrationTests.SqlServer", "TransactionManager.IntegrationTests.SqlServer\TransactionManager.IntegrationTests.SqlServer.csproj", "{4F9B4AC4-5FEA-45DB-9F00-744899DB1AF0}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TransactionManager.IntegrationTests.PostgreSql", "TransactionManager.IntegrationTests.PostgreSql\TransactionManager.IntegrationTests.PostgreSql.csproj", "{B49843A1-7593-4CB1-A4B1-01D1B393FB67}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{4F9B4AC4-5FEA-45DB-9F00-744899DB1AF0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4F9B4AC4-5FEA-45DB-9F00-744899DB1AF0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4F9B4AC4-5FEA-45DB-9F00-744899DB1AF0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B49843A1-7593-4CB1-A4B1-01D1B393FB67}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B49843A1-7593-4CB1-A4B1-01D1B393FB67}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B49843A1-7593-4CB1-A4B1-01D1B393FB67}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B49843A1-7593-4CB1-A4B1-01D1B393FB67}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

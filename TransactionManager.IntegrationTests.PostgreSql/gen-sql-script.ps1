@@ -1,0 +1,1 @@
+dotnet ef dbcontext script --project TransactionManager.IntegrationTests\TransactionManager.IntegrationTests.csproj --startup-project TransactionManager.IntegrationTests.PostgreSql\TransactionManager.IntegrationTests.PostgreSql.csproj --context AppDbContext --output TransactionManager.IntegrationTests.PostgreSql\schema.sql

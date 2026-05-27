@@ -1,6 +1,6 @@
 {
   "profiles": {
-    "TxnManager.IntegrationTests": {
+    "TransactionManager.IntegrationTests": {
       "commandName": "Project"
     },
     "Container (Dockerfile)": {

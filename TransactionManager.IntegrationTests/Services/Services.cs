@@ -119,7 +119,9 @@ public class OrderService(
 
             // Deduct inventory (plain DbContext service — enrolls in ambient tx)
             foreach (var (product, qty, _) in items)
+            {
                 await inventoryService.DeductStockAsync(product, qty, ct);
+            }
 
             // Update status (tx-aware service — joins existing tx, IsOwner=false)
             await statusService.UpdateStatusAsync(order.Id, "Confirmed", ct);
@@ -132,7 +134,7 @@ public class OrderService(
             Console.WriteLine($"    [OrderService] Transaction committed for order #{order.Id}");
             return order;
         }
-        catch
+        catch (Exception ex)
         {
             await scope.RollbackAsync(CancellationToken.None);
             Console.WriteLine($"    [OrderService] Transaction rolled back.");

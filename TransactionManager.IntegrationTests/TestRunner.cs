@@ -5,7 +5,7 @@ using TransactionManager.IntegrationTests.Data;
 using TransactionManager.IntegrationTests.Models;
 using TransactionManager.IntegrationTests.Services;
 
-namespace TransactionManager.IntegrationTests.SqlServer;
+namespace TransactionManager.IntegrationTests;
 
 public class TestRunner(IServiceProvider rootProvider)
 {
@@ -21,8 +21,6 @@ public class TestRunner(IServiceProvider rootProvider)
         Console.WriteLine("║         TransactionManager Integration Tests                 ║");
         Console.WriteLine("╚══════════════════════════════════════════════════════════════╝");
         Console.WriteLine();
-
-        await SeedDatabaseAsync();
 
         await RunCase("Case 1 — Happy path: full order creation (all services succeed)",
             Case1_HappyPath_FullOrderCreation);
@@ -59,6 +57,9 @@ public class TestRunner(IServiceProvider rootProvider)
         var orderService = scope.ServiceProvider.GetRequiredService<OrderService>();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var inventoryService = scope.ServiceProvider.GetRequiredService<InventoryService>();
+
+        await EnsureInventoryAsync(db, "Widget A", 100);
+        await EnsureInventoryAsync(db, "Widget B", 50);
 
         int stockBefore = await inventoryService.GetStockAsync("Widget A");
 
@@ -197,8 +198,6 @@ public class TestRunner(IServiceProvider rootProvider)
         db.Orders.Add(order);
         await db.SaveChangesAsync();
 
-        bool innerIsOwnerCaptured = false;
-
         await using var outerScope = await txManager.BeginTransactionAsync();
         Assert(outerScope.IsOwner, "Outer scope should be owner");
 
@@ -308,24 +307,27 @@ public class TestRunner(IServiceProvider rootProvider)
     // ----------------------------------------------------------------
     // Infrastructure
     // ----------------------------------------------------------------
-    private async Task SeedDatabaseAsync()
+    private static async Task EnsureInventoryAsync(AppDbContext db, string productName, int minimumStock)
     {
-        Console.WriteLine("► Seeding database...");
+        var inventory = await db.Inventories
+            .FirstOrDefaultAsync(x => x.ProductName == productName);
 
-        using var scope = rootProvider.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        if (inventory is null)
+        {
+            db.Inventories.Add(new Inventory
+            {
+                ProductName = productName,
+                Stock = minimumStock
+            });
+            await db.SaveChangesAsync();
+            return;
+        }
 
-        await db.Database.EnsureDeletedAsync();
-        await db.Database.EnsureCreatedAsync();
-
-        db.Inventories.AddRange(
-            new Inventory { ProductName = "Widget A", Stock = 100 },
-            new Inventory { ProductName = "Widget B", Stock = 50 }
-        );
-
-        await db.SaveChangesAsync();
-        Console.WriteLine("  Inventory seeded: Widget A=100, Widget B=50");
-        Console.WriteLine();
+        if (inventory.Stock < minimumStock)
+        {
+            inventory.Stock = minimumStock;
+            await db.SaveChangesAsync();
+        }
     }
 
     private async Task RunCase(string name, Func<IServiceScope, Task> test)
@@ -352,7 +354,9 @@ public class TestRunner(IServiceProvider rootProvider)
     private static void Assert(bool condition, string message)
     {
         if (!condition)
+        {
             throw new Exception($"Assertion failed: {message}");
+        }
 
         Console.WriteLine($"    [✓] {message}");
     }
