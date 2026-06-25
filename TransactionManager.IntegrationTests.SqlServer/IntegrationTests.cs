@@ -10,7 +10,7 @@ public class SqlServerIntegrationTests(SqlServerContainerFixture fixture)
     public async Task Case1_HappyPath_FullOrderCreation()
     {
         using var scope = fixture.ServiceProvider.CreateScope();
-        var runner = new TestRunner(fixture.ServiceProvider);
+        var runner = new TestRunner();
         await runner.Case1_HappyPath_FullOrderCreation(scope);
     }
 
@@ -18,7 +18,7 @@ public class SqlServerIntegrationTests(SqlServerContainerFixture fixture)
     public async Task Case2_StatusService_Standalone()
     {
         using var scope = fixture.ServiceProvider.CreateScope();
-        var runner = new TestRunner(fixture.ServiceProvider);
+        var runner = new TestRunner();
         await runner.Case2_StatusService_Standalone(scope);
     }
 
@@ -26,7 +26,7 @@ public class SqlServerIntegrationTests(SqlServerContainerFixture fixture)
     public async Task Case3_Rollback_InsufficientStock()
     {
         using var scope = fixture.ServiceProvider.CreateScope();
-        var runner = new TestRunner(fixture.ServiceProvider);
+        var runner = new TestRunner();
         await runner.Case3_Rollback_InsufficientStock(scope);
     }
 
@@ -34,7 +34,7 @@ public class SqlServerIntegrationTests(SqlServerContainerFixture fixture)
     public async Task Case4_Rollback_OrderNotFound()
     {
         using var scope = fixture.ServiceProvider.CreateScope();
-        var runner = new TestRunner(fixture.ServiceProvider);
+        var runner = new TestRunner();
         await runner.Case4_Rollback_OrderNotFound(scope);
     }
 
@@ -42,7 +42,7 @@ public class SqlServerIntegrationTests(SqlServerContainerFixture fixture)
     public async Task Case5_Nested_TxAware_JoinsOuter()
     {
         using var scope = fixture.ServiceProvider.CreateScope();
-        var runner = new TestRunner(fixture.ServiceProvider);
+        var runner = new TestRunner();
         await runner.Case5_Nested_TxAware_JoinsOuter(scope);
     }
 
@@ -50,7 +50,7 @@ public class SqlServerIntegrationTests(SqlServerContainerFixture fixture)
     public async Task Case6_CancellationToken_Rollback()
     {
         using var scope = fixture.ServiceProvider.CreateScope();
-        var runner = new TestRunner(fixture.ServiceProvider);
+        var runner = new TestRunner();
         await runner.Case6_CancellationToken_Rollback(scope);
     }
 
@@ -58,7 +58,7 @@ public class SqlServerIntegrationTests(SqlServerContainerFixture fixture)
     public async Task Case7_HappyPath_OrderCancellation()
     {
         using var scope = fixture.ServiceProvider.CreateScope();
-        var runner = new TestRunner(fixture.ServiceProvider);
+        var runner = new TestRunner();
         await runner.Case7_HappyPath_OrderCancellation(scope);
     }
 
@@ -66,7 +66,7 @@ public class SqlServerIntegrationTests(SqlServerContainerFixture fixture)
     public async Task Case8_Rollback_ViaDisposeAsync()
     {
         using var scope = fixture.ServiceProvider.CreateScope();
-        var runner = new TestRunner(fixture.ServiceProvider);
+        var runner = new TestRunner();
         await runner.Case8_Rollback_ViaDisposeAsync(scope);
     }
 }

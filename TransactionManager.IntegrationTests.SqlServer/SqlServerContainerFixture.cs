@@ -32,15 +32,14 @@ public sealed class SqlServerContainerFixture : IAsyncLifetime
         services.AddScoped<InventoryService>();
         services.AddScoped<OrderService>();
 
-        ServiceProvider = services.BuildServiceProvider();
-
-        using var scope = ServiceProvider.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        await db.Database.EnsureCreatedAsync();
+        ServiceProvider = services.BuildServiceProvider(
+            new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
 
         var seedResult = await DatabaseSeeder.SeedAsync(ServiceProvider);
         if (!seedResult.Succeeded)
-            throw new InvalidOperationException($"Database seeding failed: {seedResult.Exception?.Message}", seedResult.Exception);
+            throw new InvalidOperationException(
+                $"Database seeding failed{(seedResult.Exception is { } ex ? $": {ex.Message}" : " with no exception details")}",
+                seedResult.Exception);
     }
 
     public async Task DisposeAsync()

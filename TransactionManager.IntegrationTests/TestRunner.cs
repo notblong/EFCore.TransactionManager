@@ -7,7 +7,7 @@ using TransactionManager.IntegrationTests.Services;
 
 namespace TransactionManager.IntegrationTests;
 
-public class TestRunner(IServiceProvider rootProvider)
+public class TestRunner
 {
     // ----------------------------------------------------------------
     // Case 1 — Happy path: everything succeeds, verify DB state
