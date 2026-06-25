@@ -1,0 +1,59 @@
+name: Integration Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  integration-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Pre-pull container images
+        run: |
+          docker pull mcr.microsoft.com/mssql/server:2022-latest &
+          docker pull postgres:16 &
+          wait
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Run SQL Server integration tests
+        run: |
+          dotnet test TransactionManager.IntegrationTests.SqlServer \
+            --no-build --configuration Release \
+            --logger "trx;LogFileName=sqlserver-results.trx" \
+            --logger "console;verbosity=normal"
+
+      - name: Run PostgreSQL integration tests
+        run: |
+          dotnet test TransactionManager.IntegrationTests.PostgreSql \
+            --no-build --configuration Release \
+            --logger "trx;LogFileName=postgres-results.trx" \
+            --logger "console;verbosity=normal"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: "**/*.trx"
+
+      - name: Publish test results to Actions summary
+        if: always()
+        uses: dorny/test-reporter@v2
+        with:
+          name: Integration Test Results
+          path: "**/*.trx"
+          reporter: dotnet-trx
