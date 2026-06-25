@@ -9,7 +9,7 @@ namespace TransactionManager.IntegrationTests.Models
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public ICollection<OrderItem> Items { get; set; } = [];
-        public AuditLog? AuditLog { get; set; }
+        public ICollection<AuditLog> AuditLogs { get; set; } = [];
     }
 
     public class OrderItem

@@ -1,1 +1,0 @@
-dotnet ef dbcontext script --project TransactionManager.IntegrationTests\TransactionManager.IntegrationTests.csproj --startup-project TransactionManager.IntegrationTests.SqlServer\TransactionManager.IntegrationTests.SqlServer.csproj --context AppDbContext --output TransactionManager.IntegrationTests.SqlServer\schema.sql

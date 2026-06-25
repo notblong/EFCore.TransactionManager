@@ -7,52 +7,12 @@ using TransactionManager.IntegrationTests.Services;
 
 namespace TransactionManager.IntegrationTests;
 
-public class TestRunner(IServiceProvider rootProvider)
+public class TestRunner
 {
-    private int _passed = 0;
-    private int _failed = 0;
-
-    // ----------------------------------------------------------------
-    // Entry point — runs all cases sequentially
-    // ----------------------------------------------------------------
-    public async Task RunAllAsync()
-    {
-        Console.WriteLine("╔══════════════════════════════════════════════════════════════╗");
-        Console.WriteLine("║         TransactionManager Integration Tests                 ║");
-        Console.WriteLine("╚══════════════════════════════════════════════════════════════╝");
-        Console.WriteLine();
-
-        await RunCase("Case 1 — Happy path: full order creation (all services succeed)",
-            Case1_HappyPath_FullOrderCreation);
-
-        await RunCase("Case 2 — StatusService standalone (owns its own tx)",
-            Case2_StatusService_Standalone);
-
-        await RunCase("Case 3 — Rollback: insufficient stock triggers full rollback",
-            Case3_Rollback_InsufficientStock);
-
-        await RunCase("Case 4 — Rollback: order not found in StatusService rolls back outer",
-            Case4_Rollback_OrderNotFound);
-
-        await RunCase("Case 5 — Nested tx-aware services: StatusService joins outer (IsOwner=false)",
-            Case5_Nested_TxAware_JoinsOuter);
-
-        await RunCase("Case 6 — CancellationToken cancelled mid-flight rolls back cleanly",
-            Case6_CancellationToken_Rollback);
-
-        await RunCase("Case 7 — Happy path: order cancellation flow",
-            Case7_HappyPath_OrderCancellation);
-
-        await RunCase("Case 8 — Rollback via DisposeAsync (no explicit rollback called)",
-            Case8_Rollback_ViaDisposeAsync);
-
-        PrintSummary();
-    }
-
     // ----------------------------------------------------------------
     // Case 1 — Happy path: everything succeeds, verify DB state
     // ----------------------------------------------------------------
-    private async Task Case1_HappyPath_FullOrderCreation(IServiceScope scope)
+    public async Task Case1_HappyPath_FullOrderCreation(IServiceScope scope)
     {
         var orderService = scope.ServiceProvider.GetRequiredService<OrderService>();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -71,14 +31,15 @@ public class TestRunner(IServiceProvider rootProvider)
         // Verify order persisted
         var savedOrder = await db.Orders
             .Include(o => o.Items)
-            .Include(o => o.AuditLog)
+            .Include(o => o.AuditLogs)
             .FirstOrDefaultAsync(o => o.Id == order.Id);
 
         Assert(savedOrder is not null, "Order should be persisted");
         Assert(savedOrder!.Status == "Confirmed", $"Status should be 'Confirmed', got '{savedOrder.Status}'");
         Assert(savedOrder.Items.Count == 2, $"Should have 2 items, got {savedOrder.Items.Count}");
-        Assert(savedOrder.AuditLog is not null, "AuditLog should be persisted");
-        Assert(savedOrder.AuditLog!.Action == "OrderCreated", "AuditLog action should be 'OrderCreated'");
+        var auditLogs = savedOrder.AuditLogs.ToList();
+        Assert(auditLogs.Count == 1, $"AuditLog should be persisted, got {auditLogs.Count}");
+        Assert(auditLogs[0].Action == "OrderCreated", "AuditLog action should be 'OrderCreated'");
 
         int stockAfter = await inventoryService.GetStockAsync("Widget A");
         Assert(stockAfter == stockBefore - 2, $"Stock should have decreased by 2: before={stockBefore}, after={stockAfter}");
@@ -87,7 +48,7 @@ public class TestRunner(IServiceProvider rootProvider)
     // ----------------------------------------------------------------
     // Case 2 — StatusService standalone (no outer tx, owns its own)
     // ----------------------------------------------------------------
-    private async Task Case2_StatusService_Standalone(IServiceScope scope)
+    public async Task Case2_StatusService_Standalone(IServiceScope scope)
     {
         var statusService = scope.ServiceProvider.GetRequiredService<StatusService>();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -106,11 +67,14 @@ public class TestRunner(IServiceProvider rootProvider)
     // ----------------------------------------------------------------
     // Case 3 — Rollback: insufficient stock — order + audit must NOT persist
     // ----------------------------------------------------------------
-    private async Task Case3_Rollback_InsufficientStock(IServiceScope scope)
+    public async Task Case3_Rollback_InsufficientStock(IServiceScope scope)
     {
         var orderService = scope.ServiceProvider.GetRequiredService<OrderService>();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var inventoryService = scope.ServiceProvider.GetRequiredService<InventoryService>();
+
+        // Cap to a known small value so the test is deterministic regardless of seed data
+        await EnsureMaxInventoryAsync(db, "Widget A", 10);
 
         int stockBefore = await inventoryService.GetStockAsync("Widget A");
         int orderCountBefore = db.Orders.Count();
@@ -118,9 +82,9 @@ public class TestRunner(IServiceProvider rootProvider)
 
         try
         {
-            // Request more than available stock
+            // Request more than available stock (stockBefore + 1 guarantees the throw)
             await orderService.CreateOrderAsync("Charlie", [
-                ("Widget A", 9999, 9.99m) // way more than stock
+                ("Widget A", stockBefore + 1, 9.99m)
             ]);
 
             Assert(false, "Should have thrown due to insufficient stock");
@@ -143,12 +107,17 @@ public class TestRunner(IServiceProvider rootProvider)
     // ----------------------------------------------------------------
     // Case 4 — Rollback: StatusService throws (order not found), outer rolls back
     // ----------------------------------------------------------------
-    private async Task Case4_Rollback_OrderNotFound(IServiceScope scope)
+    public async Task Case4_Rollback_OrderNotFound(IServiceScope scope)
     {
         var statusService = scope.ServiceProvider.GetRequiredService<StatusService>();
         var txManager = scope.ServiceProvider.GetRequiredService<ITransactionManager<AppDbContext>>();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var auditService = scope.ServiceProvider.GetRequiredService<AuditService>();
+
+        // Create a real order so AuditService can write a valid FK reference
+        var order = new Order { CustomerName = "Tester", TotalAmount = 0m, Status = "Pending" };
+        db.Orders.Add(order);
+        await db.SaveChangesAsync();
 
         int auditCountBefore = db.AuditLogs.Count();
 
@@ -158,8 +127,8 @@ public class TestRunner(IServiceProvider rootProvider)
 
             try
             {
-                // This succeeds fine
-                await auditService.LogAsync(99999, "SomeAction", "Tester");
+                // Write audit log against the real order (valid FK)
+                await auditService.LogAsync(order.Id, "SomeAction", "Tester");
 
                 // This throws — order 99999 doesn't exist
                 await statusService.UpdateStatusAsync(99999, "Confirmed");
@@ -188,7 +157,7 @@ public class TestRunner(IServiceProvider rootProvider)
     // ----------------------------------------------------------------
     // Case 5 — Nested tx: verify StatusService IsOwner=false when nested
     // ----------------------------------------------------------------
-    private async Task Case5_Nested_TxAware_JoinsOuter(IServiceScope scope)
+    public async Task Case5_Nested_TxAware_JoinsOuter(IServiceScope scope)
     {
         var txManager = scope.ServiceProvider.GetRequiredService<ITransactionManager<AppDbContext>>();
         var statusService = scope.ServiceProvider.GetRequiredService<StatusService>();
@@ -214,7 +183,7 @@ public class TestRunner(IServiceProvider rootProvider)
     // ----------------------------------------------------------------
     // Case 6 — CancellationToken cancelled → DisposeAsync rolls back cleanly
     // ----------------------------------------------------------------
-    private async Task Case6_CancellationToken_Rollback(IServiceScope scope)
+    public async Task Case6_CancellationToken_Rollback(IServiceScope scope)
     {
         var txManager = scope.ServiceProvider.GetRequiredService<ITransactionManager<AppDbContext>>();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -255,7 +224,7 @@ public class TestRunner(IServiceProvider rootProvider)
     // ----------------------------------------------------------------
     // Case 7 — Happy path: cancel an existing order
     // ----------------------------------------------------------------
-    private async Task Case7_HappyPath_OrderCancellation(IServiceScope scope)
+    public async Task Case7_HappyPath_OrderCancellation(IServiceScope scope)
     {
         var orderService = scope.ServiceProvider.GetRequiredService<OrderService>();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -267,7 +236,6 @@ public class TestRunner(IServiceProvider rootProvider)
         await orderService.CancelOrderAsync(order.Id, "Admin");
 
         var updated = await db.Orders
-            .Include(o => o.AuditLog)
             .FirstOrDefaultAsync(o => o.Id == order.Id);
 
         Assert(updated!.Status == "Cancelled", $"Status should be 'Cancelled', got '{updated.Status}'");
@@ -281,7 +249,7 @@ public class TestRunner(IServiceProvider rootProvider)
     // ----------------------------------------------------------------
     // Case 8 — No explicit commit/rollback: DisposeAsync auto-rolls back
     // ----------------------------------------------------------------
-    private async Task Case8_Rollback_ViaDisposeAsync(IServiceScope scope)
+    public async Task Case8_Rollback_ViaDisposeAsync(IServiceScope scope)
     {
         var txManager = scope.ServiceProvider.GetRequiredService<ITransactionManager<AppDbContext>>();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -307,6 +275,19 @@ public class TestRunner(IServiceProvider rootProvider)
     // ----------------------------------------------------------------
     // Infrastructure
     // ----------------------------------------------------------------
+    private static async Task EnsureMaxInventoryAsync(AppDbContext db, string productName, int maxStock)
+    {
+        var inventory = await db.Inventories
+            .FirstOrDefaultAsync(x => x.ProductName == productName);
+
+        if (inventory is null)
+            db.Inventories.Add(new Inventory { ProductName = productName, Stock = maxStock });
+        else
+            inventory.Stock = maxStock;
+
+        await db.SaveChangesAsync();
+    }
+
     private static async Task EnsureInventoryAsync(AppDbContext db, string productName, int minimumStock)
     {
         var inventory = await db.Inventories
@@ -330,27 +311,6 @@ public class TestRunner(IServiceProvider rootProvider)
         }
     }
 
-    private async Task RunCase(string name, Func<IServiceScope, Task> test)
-    {
-        Console.WriteLine($"┌─ {name}");
-
-        using var scope = rootProvider.CreateScope();
-
-        try
-        {
-            await test(scope);
-            Console.WriteLine($"└─ ✅ PASSED");
-            _passed++;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"└─ ❌ FAILED: {ex.Message}");
-            _failed++;
-        }
-
-        Console.WriteLine();
-    }
-
     private static void Assert(bool condition, string message)
     {
         if (!condition)
@@ -359,12 +319,5 @@ public class TestRunner(IServiceProvider rootProvider)
         }
 
         Console.WriteLine($"    [✓] {message}");
-    }
-
-    private void PrintSummary()
-    {
-        Console.WriteLine("══════════════════════════════════════════════════════════════");
-        Console.WriteLine($"  Results: {_passed} passed, {_failed} failed out of {_passed + _failed} cases");
-        Console.WriteLine("══════════════════════════════════════════════════════════════");
     }
 }
