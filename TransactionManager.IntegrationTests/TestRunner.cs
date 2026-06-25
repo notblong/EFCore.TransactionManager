@@ -31,14 +31,15 @@ public class TestRunner
         // Verify order persisted
         var savedOrder = await db.Orders
             .Include(o => o.Items)
-            .Include(o => o.AuditLog)
+            .Include(o => o.AuditLogs)
             .FirstOrDefaultAsync(o => o.Id == order.Id);
 
         Assert(savedOrder is not null, "Order should be persisted");
         Assert(savedOrder!.Status == "Confirmed", $"Status should be 'Confirmed', got '{savedOrder.Status}'");
         Assert(savedOrder.Items.Count == 2, $"Should have 2 items, got {savedOrder.Items.Count}");
-        Assert(savedOrder.AuditLog is not null, "AuditLog should be persisted");
-        Assert(savedOrder.AuditLog!.Action == "OrderCreated", "AuditLog action should be 'OrderCreated'");
+        var auditLogs = savedOrder.AuditLogs.ToList();
+        Assert(auditLogs.Count == 1, $"AuditLog should be persisted, got {auditLogs.Count}");
+        Assert(auditLogs[0].Action == "OrderCreated", "AuditLog action should be 'OrderCreated'");
 
         int stockAfter = await inventoryService.GetStockAsync("Widget A");
         Assert(stockAfter == stockBefore - 2, $"Stock should have decreased by 2: before={stockBefore}, after={stockAfter}");
@@ -72,15 +73,18 @@ public class TestRunner
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var inventoryService = scope.ServiceProvider.GetRequiredService<InventoryService>();
 
+        // Cap to a known small value so the test is deterministic regardless of seed data
+        await EnsureMaxInventoryAsync(db, "Widget A", 10);
+
         int stockBefore = await inventoryService.GetStockAsync("Widget A");
         int orderCountBefore = db.Orders.Count();
         int auditCountBefore = db.AuditLogs.Count();
 
         try
         {
-            // Request more than available stock
+            // Request more than available stock (stockBefore + 1 guarantees the throw)
             await orderService.CreateOrderAsync("Charlie", [
-                ("Widget A", 9999, 9.99m) // way more than stock
+                ("Widget A", stockBefore + 1, 9.99m)
             ]);
 
             Assert(false, "Should have thrown due to insufficient stock");
@@ -110,6 +114,11 @@ public class TestRunner
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var auditService = scope.ServiceProvider.GetRequiredService<AuditService>();
 
+        // Create a real order so AuditService can write a valid FK reference
+        var order = new Order { CustomerName = "Tester", TotalAmount = 0m, Status = "Pending" };
+        db.Orders.Add(order);
+        await db.SaveChangesAsync();
+
         int auditCountBefore = db.AuditLogs.Count();
 
         try
@@ -118,8 +127,8 @@ public class TestRunner
 
             try
             {
-                // This succeeds fine
-                await auditService.LogAsync(99999, "SomeAction", "Tester");
+                // Write audit log against the real order (valid FK)
+                await auditService.LogAsync(order.Id, "SomeAction", "Tester");
 
                 // This throws — order 99999 doesn't exist
                 await statusService.UpdateStatusAsync(99999, "Confirmed");
@@ -227,7 +236,6 @@ public class TestRunner
         await orderService.CancelOrderAsync(order.Id, "Admin");
 
         var updated = await db.Orders
-            .Include(o => o.AuditLog)
             .FirstOrDefaultAsync(o => o.Id == order.Id);
 
         Assert(updated!.Status == "Cancelled", $"Status should be 'Cancelled', got '{updated.Status}'");
@@ -267,6 +275,19 @@ public class TestRunner
     // ----------------------------------------------------------------
     // Infrastructure
     // ----------------------------------------------------------------
+    private static async Task EnsureMaxInventoryAsync(AppDbContext db, string productName, int maxStock)
+    {
+        var inventory = await db.Inventories
+            .FirstOrDefaultAsync(x => x.ProductName == productName);
+
+        if (inventory is null)
+            db.Inventories.Add(new Inventory { ProductName = productName, Stock = maxStock });
+        else
+            inventory.Stock = maxStock;
+
+        await db.SaveChangesAsync();
+    }
+
     private static async Task EnsureInventoryAsync(AppDbContext db, string productName, int minimumStock)
     {
         var inventory = await db.Inventories

@@ -26,9 +26,9 @@ namespace TransactionManager.IntegrationTests.Data
                  .WithOne(x => x.Order)
                  .HasForeignKey(x => x.OrderId);
 
-                e.HasOne(x => x.AuditLog)
+                e.HasMany(x => x.AuditLogs)
                  .WithOne(x => x.Order)
-                 .HasForeignKey<AuditLog>(x => x.OrderId);
+                 .HasForeignKey(x => x.OrderId);
             });
 
             modelBuilder.Entity<OrderItem>(e =>

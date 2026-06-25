@@ -134,7 +134,7 @@ public class OrderService(
             Console.WriteLine($"    [OrderService] Transaction committed for order #{order.Id}");
             return order;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             await scope.RollbackAsync(CancellationToken.None);
             Console.WriteLine($"    [OrderService] Transaction rolled back.");
